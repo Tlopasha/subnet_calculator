@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIDR/VLSM Calculator</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+</head>
+<body class="bg-gray-900 text-white">
+<div class="container mx-auto px-auto py-8">
+    <div class="text-2xl flex justify-center items-center">
+        CIDR/VLSM Subnet Calculator
+    </div>
+</div>
+<div class="container mx-auto px-auto py-8">
+    <table class="w-full bg-gray-800 rounded-lg shadow-lg">
+        <tbody>
+        <tr>
+            <td class="py-3 px-6">Network IP</td>
+            <td class="py-3 px-6">
+                <input type="text" name="network_ip" id="network_ip" value="255.255.255.255"
+                       onChange="networkIPCheck(this.value)"
+                       class="w-full bg-gray-700 text-white p-2 rounded-lg">
+            </td>
+        </tr>
+        <tr>
+            <td class="py-3 px-6">Network IP Binary</td>
+            <td class="py-3 px-6">
+                <div id="ip_binary" class="p-2 bg-gray-700 rounded-lg">11111111.11111111.11111111.11111111</div>
+            </td>
+        </tr>
+        <tr>
+            <td class="py-3 px-6">Network Mask</td>
+            <td class="py-3 px-6">
+                <input type="number" name="network_mask" id="network_mask" min="1" max="31" value="24"
+                       onChange="CheckNWMask(this.value)"
+                       class="w-full bg-gray-700 text-white p-2 rounded-lg">
+            </td>
+        </tr>
+        <tr>
+            <td class="py-3 px-6">Subnet Mask</td>
+            <td class="py-3 px-6">
+                <div id="subnet_mask" class="p-2 bg-gray-700 rounded-lg">255.255.255.0</div>
+            </td>
+        </tr>
+        <tr>
+            <td class="py-3 px-6">Subnet Mask Binary</td>
+            <td class="py-3 px-6">
+                <div id="subnet_mask_binary" class="p-2 bg-gray-700 rounded-lg">11111111.11111111.11111111.00000000
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="py-3 px-6">Subnets Count</td>
+            <td class="py-3 px-6">
+                <input type="number" name="subnet_amount" id="subnet_amount" onChange="generateSubnetTable(this.value)"
+                       min="1" max="999" value="0"
+                       maxlength="3" class="w-full bg-gray-700 text-white p-2 rounded-lg">
+            </td>
+        </tr>
+        <tr>
+            <td class="py-2 bg-yellow-500 text-black font-bold rounded-xl text-center" colspan="2">Subnets</td>
+        </tr>
+        <tr>
+            <td class="py-3 px-6" colspan="2">
+                <table id="subnet_table" class="w-full bg-gray-800 rounded-lg">
+                    <tbody>
+                    <tr>
+                        <td class="py-3">Host Name</td>
+                        <td class="py-3">Host Size</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td class="py-3 px-6" colspan="2">
+                <table class="w-full bg-gray-800 rounded-lg">
+                    <tbody>
+                    <tr>
+                        <td class="py-3">Total Hosts Size</td>
+                        <td class="py-3 px-12" id="host_size">0</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td class="py-3 px-6 text-center" colspan="2">
+                <input type="submit" onclick="subnetCalc()" name="subm" id="subm" value="generate" disabled
+                       class="bg-gray-700 text-white py-2 px-4 rounded-lg cursor-pointer">
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="py-3 px-6 mt-12 bg-green-500 text-black rounded-lg font-bold text-center">Solution</div>
+    <div id="solution" class="bg-gray-800 p-4 rounded-lg"></div>
+</div>
+
+
+<div class="text-gray-400 mt-10 mb-5 flex drop-shadow-lg justify-center items-center flex-col">
+    by Mohamad Shikh Mohamad
+    <a target="_blank" href="https://github.com/Tlopasha"><img alt="Mohamad Tlopasha" class="w-7 h-7"
+                                                                src="data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgNzIgNzIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0ibTI5LjA0Mzk2OSA2MS42MTExMjVjMC0uOTI3NDY4LS4wMzQ3NC0zLjk3OTgyOC0uMDM0NzQtNy43NjQ1NDMgMC0yLjY0NjA5Mi44NzQwMTMtNC4zNzI3MzUgMS44NjI5NTYtNS4yNTIwOTMtNi4yMjc2NzMtLjcyMTY2MS0xMi43Nzg3NTctMy4xNTM5MjgtMTIuNzc4NzU3LTE0LjAzNDk4MiAwLTMuMDk3OCAxLjA5NTg1OC01LjYzMTYzMiAyLjg4NjY0OC03LjYxNDg2NS0uMjg1OTkyLS43MTg5OS0xLjI1MzU1My0zLjYwNTYzNy4yNzc5NzMtNy41MTMzMDEgMCAwIDIuMzU0NzU1LS43NjQ0MjcgNy43MTY0MzQgMi45MDgwMyAyLjIzNzE1LS42MjgxMTMgNC42MzczNDQtLjk0NjE3OSA3LjAyNjg0NS0uOTUxNTI2IDIuMzg0MTU2LjAwNTQgNC43ODQzNDkuMzIzNDEzIDcuMDI2ODQ2Ljk1MTUyNiA1LjM1NjMzMy0zLjY3MjQ1NyA3LjcxMTA4OC0yLjkwODAzIDcuNzExMDg4LTIuOTA4MDMgMS41MzE1MjcgMy45MDc2NjQuNTY5MzExIDYuNzk0MzExLjI3Nzk3NCA3LjUxMzMwMSAxLjc5NjEzNCAxLjk4MzIzMyAyLjg4MTMgNC41MTQzOTMgMi44ODEzIDcuNjE0ODY1IDAgMTAuOTA1MTA5LTYuNTU5MTAxIDEzLjMwNzk3NS0xMi44MTYxNzYgMTQuMDA4MjUzIDEuMDEzMDAxLjg4MjAzMiAxLjkwODM5NSAyLjYxMTM0NiAxLjkwODM5NSA1LjI2Mjc4NSAwIDMuNzkyNzMyLS4wMzQ3NCA2Ljg1MDQ0LS4wMzQ3NCA3Ljc4MDU4IDAgLjc2MTc1NS41MDUxNjIgMS42NDExMTQgMS45Mjk3NzUgMS4zNjg0ODYgMTEuMTQ1NjY1LTMuNzU3OTg3IDE5LjE3NzQ5LTE0LjM5NTgxMyAxOS4xNzc0OS0yNi45MzEzNDIgMC0xNS42Nzg3NjctMTIuNTY3NjAzLTI4LjM4ODAyOTktMjguMDY3MjkxLTI4LjM4ODAyOTktMTUuNDk0MzQxIDAtMjguMDU5MjcwOCAxMi43MDY1ODk5LTI4LjA1OTI3MDggMjguMzg4MDI5OSAwIDEyLjU0MDg3NSA4LjAzOTg0MjggMjMuMTgxMzc0IDE5LjIwMTU0MzggMjYuOTM0MDE1IDEuMzk1MjEyLjI2MTkzNiAxLjkwNTcyMS0uNjE0NzQ5IDEuOTA1NzIxLTEuMzcxMTU5eiIgZmlsbD0iI2QwY2ZjZSIvPjxnIHN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiMwMDA7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjEwO3N0cm9rZS13aWR0aDoyIj48cGF0aCBkPSJtMjkuMDQzOTY5IDYxLjYxMTEyNWMwLS45Mjc0NjgtLjAzNDc0LTMuOTc5ODI4LS4wMzQ3NC03Ljc2NDU0MyAwLTIuNjQ2MDkyLjg3NDAxMy00LjM3MjczNSAxLjg2Mjk1Ni01LjI1MjA5My02LjIyNzY3My0uNzIxNjYxLTEyLjc3ODc1Ny0zLjE1MzkyOC0xMi43Nzg3NTctMTQuMDM0OTgyIDAtMy4wOTc4IDEuMDk1ODU4LTUuNjMxNjMyIDIuODg2NjQ4LTcuNjE0ODY1LS4yODU5OTItLjcxODk5LTEuMjUzNTUzLTMuNjA1NjM3LjI3Nzk3My03LjUxMzMwMSAwIDAgMi4zNTQ3NTUtLjc2NDQyNyA3LjcxNjQzNCAyLjkwODAzIDIuMjM3MTUtLjYyODExMyA0LjYzNzM0NC0uOTQ2MTc5IDcuMDI2ODQ1LS45NTE1MjYgMi4zODQxNTYuMDA1NCA0Ljc4NDM0OS4zMjM0MTMgNy4wMjY4NDYuOTUxNTI2IDUuMzU2MzMzLTMuNjcyNDU3IDcuNzExMDg4LTIuOTA4MDMgNy43MTEwODgtMi45MDgwMyAxLjUzMTUyNyAzLjkwNzY2NC41NjkzMTEgNi43OTQzMTEuMjc3OTc0IDcuNTEzMzAxIDEuNzk2MTM0IDEuOTgzMjMzIDIuODgxMyA0LjUxNDM5MyAyLjg4MTMgNy42MTQ4NjUgMCAxMC45MDUxMDktNi41NTkxMDEgMTMuMzA3OTc1LTEyLjgxNjE3NiAxNC4wMDgyNTMgMS4wMTMwMDEuODgyMDMyIDEuOTA4Mzk1IDIuNjExMzQ2IDEuOTA4Mzk1IDUuMjYyNzg1IDAgMy43OTI3MzItLjAzNDc0IDYuODUwNDQtLjAzNDc0IDcuNzgwNTggMCAuNzYxNzU1LjUwNTE2MiAxLjY0MTExNCAxLjkyOTc3NSAxLjM2ODQ4NiAxMS4xNDU2NjUtMy43NTc5ODcgMTkuMTc3NDktMTQuMzk1ODEzIDE5LjE3NzQ5LTI2LjkzMTM0MiAwLTE1LjY3ODc2Ny0xMi41Njc2MDMtMjguMzg4MDI5OS0yOC4wNjcyOTEtMjguMzg4MDI5OS0xNS40OTQzNDEgMC0yOC4wNTkyNzA4IDEyLjcwNjU4OTktMjguMDU5MjcwOCAyOC4zODgwMjk5IDAgMTIuNTQwODc1IDguMDM5ODQyOCAyMy4xODEzNzQgMTkuMjAxNTQzOCAyNi45MzQwMTUgMS4zOTUyMTIuMjYxOTM2IDEuOTA1NzIxLS42MTQ3NDkgMS45MDU3MjEtMS4zNzExNTl6Ii8+PHBhdGggZD0ibTE2LjI4OTI2OCA0OC4wODkzMjdjMi41Njg1OC43ODA0NjIgMy41ODE1OCAxLjYzNTc2NiA0Ljc4OTY5MyAzLjY2MTc2NCAxLjIwNTQ0NCAyLjAyNTk5OCAyLjYxOTM2NiA0LjI4NzIwNCA3LjkzMjkzMyAyLjk5ODkwNCIvPjwvZz48L3N2Zz4="/></a>
+</div>
+<script type="text/javascript">
+
+  function generateSubnetTable(v) {
+    let subm = document.getElementById('subm'),
+      subnet_table = document.getElementById('subnet_table'),
+      host_size = document.getElementById('host_size'),
+      sRowCount = subnet_table.rows.length,
+      subnet_amount = document.getElementById('subnet_amount'),
+      minValue = 1,
+      maxValue = 999,
+      sValue = v;
+
+    if (v < minValue)
+      sValue = minValue;
+    if (v > maxValue)
+      sValue = maxValue;
+    subnet_amount.value = sValue;
+
+
+    if (sRowCount == sValue) {
+      let row = subnet_table.insertRow(sRowCount);
+      let cell1 = row.insertCell(0);
+      let cell2 = row.insertCell(1);
+      cell1.innerHTML = '<input type="text"  class="w-full bg-gray-700 text-white  rounded-lg" id="subnet_name' + sRowCount + '" name="subnet_name' + sRowCount + '" value="HOST ' + sRowCount + '">';
+      cell2.innerHTML = '<input type="number"  class="w-full bg-gray-700 text-white  rounded-lg" min="0" id="subnet_size_' + sRowCount + '" onChange="CalcsubnetSize(this.value)" value="0">';
+    }
+
+    if (sRowCount < sValue) {
+      let tmp = sValue - sRowCount;
+      for (let i = 0; i <= tmp; i++) {
+        let row = subnet_table.insertRow(sRowCount + i);
+        let cell1 = row.insertCell(0);
+        let cell2 = row.insertCell(1);
+        cell1.innerHTML = '<input type="text"  class="w-full bg-gray-700 text-white rounded-lg" id="subnet_name' + (sRowCount + i) + '" name="subnet_name' + (sRowCount + i) + '" value="HOST ' + (sRowCount + i) + '">';
+        cell2.innerHTML = '<input type="number"  class="w-full bg-gray-700 text-white rounded-lg" min="0" id="subnet_size_' + (sRowCount + i) + '" onChange="CalcsubnetSize(this.value)" value="0">';
+      }
+    }
+
+    if (sRowCount > sValue) {
+      if (sRowCount - 1 == sValue) {
+        subnet_table.deleteRow(sRowCount - 1);
+      } else {
+        let tmp = sRowCount - sValue;
+        for (let i = 1; i < tmp; i++) {
+          subnet_table.deleteRow(sRowCount - i);
+        }
+      }
+    }
+
+    if (sValue > 0) {
+      subm.disabled = false;
+    }
+    let ttl = 0;
+    for (let i = 1; i <= sValue; i++) {
+      ttl += parseInt(document.getElementById('subnet_size_' + i).value);
+    }
+    host_size.innerHTML = ttl;
+  }
+
+  function CheckNWMask(v) {
+    let network_mask = document.getElementById('network_mask'),
+      ip_binary = document.getElementById('ip_binary').innerHTML,
+      minValue = 1,
+      maxValue = 31,
+      mValue = v;
+    if (mValue < minValue)
+      mValue = minValue;
+    if (mValue > maxValue)
+      mValue = maxValue;
+    network_mask.value = mValue;
+
+    let smb = maskToBinMaskAddr(mValue);
+    document.getElementById('subnet_mask_binary').innerHTML = smb;
+    document.getElementById('subnet_mask').innerHTML = binIpToDecIp(smb);
+  }
+
+  function CalcsubnetSize(v) {
+    let host_size = document.getElementById('host_size');
+    let subnet_amount = document.getElementById('subnet_amount').value;
+    let ttl = 0;
+    for (let i = 1; i <= subnet_amount; i++) {
+      ttl += parseInt(document.getElementById('subnet_size_' + i).value);
+    }
+    host_size.innerHTML = ttl;
+  }
+
+  function decToBinary(dec) {
+    return (dec >>> 0).toString(2);
+  }
+
+  function networkIPCheck(v) {
+    let network_ip = document.getElementById('network_ip'),
+      ip_binary = document.getElementById('ip_binary'),
+      fValue = '255.255.255.255',
+      fBValue = '';
+    if (/^\s*((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))\s*$/.test(v)) {
+      fValue = v;
+    } else {
+      fValue = '255.255.255.255';
+    }
+    network_ip.value = fValue;
+    ip_binary.innerHTML = decIpToBinIp(fValue);
+    let network_mask = parseInt(document.getElementById('network_mask').value);
+    let smb = maskToBinMaskAddr(network_mask);
+    document.getElementById('subnet_mask_binary').innerHTML = smb;
+    document.getElementById('subnet_mask').innerHTML = binIpToDecIp(smb);
+  }
+
+  function decIpToBinIp(str) {
+    let bVal = str.split('.');
+    let binIP = '';
+    for (let i = 0; i < bVal.length; i++) {
+      binIP += addLeadingZero(8, decToBinary(parseInt(bVal[i])));
+      if (i < bVal.length - 1) {
+        binIP += '.';
+      }
+    }
+    return binIP;
+  }
+
+  function maskToBinMaskAddr(a) {
+    let network_mask = parseInt(a);
+    let ipBin = '11111111111111111111111111111111';
+    for (let i = network_mask; i < 32; i++) {
+      ipBin = ipBin.replaceAt(i, '0');
+    }
+    return binDigitToBinIP(ipBin);
+  }
+
+  function binIPToBinMaskAddr(a, b) {
+    let network_mask = parseInt(a);
+    let ipArr = b.split('.');
+    let ipBin = ipArr[0] + ipArr[1] + ipArr[2] + ipArr[3];
+    for (let i = network_mask; i < 32; i++) {
+      ipBin = ipBin.replaceAt(i, '0');
+    }
+    return binDigitToBinIP(ipBin);
+  }
+
+  function binIpToDecIp(str) {
+    const ipArr = str.split('.');
+    const ipDec = parseInt(ipArr[0], 2) + '.' + parseInt(ipArr[1], 2) + '.' + parseInt(ipArr[2], 2) + '.' + parseInt(ipArr[3], 2);
+    return ipDec;
+  }
+
+  function addLeadingZero(length, str) {
+    let returnString = str.toString();
+    let l = length - returnString.length;
+    let zero = '';
+    while (l > 0) {
+      zero += '0';
+      l--;
+    }
+    return zero + returnString;
+  }
+
+  function subnetCalc() {
+    let host_size = document.getElementById('host_size');
+    let subnet_amount = document.getElementById('subnet_amount');
+    let ip_binary = document.getElementById('ip_binary').innerHTML;
+    let smb = document.getElementById('subnet_mask_binary').innerHTML;
+    let subnetArray = [];
+    let sizeArray = [];
+    let tmpArray = [];
+    let fArray = [];
+    for (let i = 1; i <= parseInt(subnet_amount.value); i++) {
+      let subnetJson = {};
+      subnetJson.h = document.getElementById('subnet_name' + i).value;
+      subnetJson.s = parseInt(document.getElementById('subnet_size_' + i).value);
+      sizeArray.push(subnetJson.s);
+      subnetArray.push(subnetJson);
+    }
+    sizeArray.sort(sortNumber);
+
+    for (let i = sizeArray.length - 1; i >= 0; i--) {
+      for (let j = subnetArray.length - 1; j >= 0; j--) {
+        if (subnetArray[j].s == sizeArray[i]) {
+          tmpArray.push(subnetArray[j]);
+        }
+      }
+    }
+
+    for (let i = 0; i < sizeArray.length; i++) {
+      fArray.push(tmpArray[i]);
+    }
+
+    let solution = document.getElementById('solution');
+    solution.innerHTML = '';
+    let tbl = document.createElement('table');
+    tbl.style.width = '100%';
+    tbl.style.textAlign = 'center';
+    tbl.setAttribute('border', '1');
+    let tbdy = document.createElement('tbody');
+    let tr1 = document.createElement('tr');
+
+    let hostNameTD = document.createElement('td');
+    hostNameTD.appendChild(document.createTextNode('Host Name'));
+    hostNameTD.classList = 'py-6 px-6';
+    tr1.appendChild(hostNameTD);
+
+    let hostSizeTD = document.createElement('td');
+    hostSizeTD.appendChild(document.createTextNode('Host Size'));
+    hostSizeTD.classList = 'py-6 px-6';
+    tr1.appendChild(hostSizeTD);
+
+    let allocatedSizeTD = document.createElement('td');
+    allocatedSizeTD.appendChild(document.createTextNode('Allocated Size'));
+    allocatedSizeTD.classList = 'py-6 px-6';
+    tr1.appendChild(allocatedSizeTD);
+
+    let unusedHostsTD = document.createElement('td');
+    unusedHostsTD.appendChild(document.createTextNode('Unused Hosts'));
+    unusedHostsTD.classList = 'py-6 px-6';
+    tr1.appendChild(unusedHostsTD);
+
+    let networkMaskTD = document.createElement('td');
+    networkMaskTD.appendChild(document.createTextNode('Network Mask'));
+    networkMaskTD.classList = 'py-6 px-6';
+    tr1.appendChild(networkMaskTD);
+
+    let maskAddresTD = document.createElement('td');
+    maskAddresTD.appendChild(document.createTextNode('Mask Address'));
+    maskAddresTD.classList = 'py-6 px-6';
+    tr1.appendChild(maskAddresTD);
+
+    let networkAddressTD = document.createElement('td');
+    networkAddressTD.appendChild(document.createTextNode('Network Address'));
+    networkAddressTD.classList = 'py-6 px-6';
+    tr1.appendChild(networkAddressTD);
+
+    let assignableRangeTD = document.createElement('td');
+    assignableRangeTD.appendChild(document.createTextNode('Assignable Range'));
+    assignableRangeTD.classList = 'py-6 px-6';
+
+    tr1.appendChild(assignableRangeTD);
+
+    let broadcastAddressTD = document.createElement('td');
+    broadcastAddressTD.appendChild(document.createTextNode('Broadcast Address'));
+    broadcastAddressTD.classList = 'py-6 px-6';
+    tr1.appendChild(broadcastAddressTD);
+
+    tbdy.appendChild(tr1);
+    let allocSizeArray = [];
+    let allocSize = '';
+    let ttlAllocSubnets = 0;
+    let mskBinAddr = '';
+    let binNetAddr = ip_binary;
+    let netAddr = '';
+    let netMsk = 32;
+    for (let i = 0; i < fArray.length; i++) {
+      let tr = document.createElement('tr');
+      let td, tmp, tmp2;
+
+      /////////////////////Host Name/////////////////////
+      td = document.createElement('td');
+      td.appendChild(document.createTextNode(fArray[i].h));
+      tr.appendChild(td);
+
+      /////////////////////Host Size/////////////////////
+      td = document.createElement('td');
+      td.appendChild(document.createTextNode(fArray[i].s));
+      tr.appendChild(td);
+
+      /////////////////////Allocated Size/////////////////////
+      td = document.createElement('td');
+      allocSize = allocatedSize(fArray[i].s, 1);
+      ttlAllocSubnets += parseInt(allocSize);
+      td.appendChild(document.createTextNode(allocSize));
+      allocSizeArray.push(parseInt(allocSize) + 2);
+      tr.appendChild(td);
+
+      //Unused Hosts
+      td = document.createElement('td');
+      td.appendChild(document.createTextNode(parseInt(allocSize) - parseInt(fArray[i].s)));
+      tr.appendChild(td);
+
+      //Network Mask
+      td = document.createElement('td');
+      netMsk = netMask(allocSize, 1);
+      td.appendChild(document.createTextNode('/' + netMsk));
+      tr.appendChild(td);
+
+      //Mask Address
+      td = document.createElement('td');
+      mskBinAddr = maskToBinMaskAddr(netMsk);
+      mskDecAddr = binIpToDecIp(mskBinAddr);
+      td.appendChild(document.createTextNode(mskDecAddr));
+      tr.appendChild(td);
+
+      //Network Address
+      td = document.createElement('td');
+      binNetAddr = binIPToBinMaskAddr(netMsk, binNetAddr);
+      netAddr = binIpToDecIp(binNetAddr);
+      td.appendChild(document.createTextNode(netAddr));
+      tr.appendChild(td);
+
+      //Assignable Range
+      td = document.createElement('td');
+      tmp = binIPToBinary(binNetAddr);
+      tmp = binAdd(tmp, '1');
+      tmp = binDigitToBinIP(tmp);
+      tmp = binIpToDecIp(tmp);
+      tmp2 = binIPToBinary(binNetAddr);
+      tmp2 = binAdd(tmp2, decToBinary(allocSize));
+      tmp2 = binDigitToBinIP(tmp2);
+      binNetAddr = tmp2;
+      tmp2 = binIpToDecIp(tmp2);
+      td.appendChild(document.createTextNode(tmp + ' - ' + tmp2));
+      tr.appendChild(td);
+
+      //Broadcast Address
+      td = document.createElement('td');
+      tmp = binIPToBinary(binNetAddr);
+      tmp = binAdd(tmp, 1);
+      tmp = binDigitToBinIP(tmp);
+      binNetAddr = tmp;
+      tmp = binIpToDecIp(tmp);
+      td.appendChild(document.createTextNode(tmp));
+      tr.appendChild(td);
+
+      tmp = binIPToBinary(binNetAddr);
+      tmp = binAdd(tmp, 1);
+      tmp = binDigitToBinIP(tmp);
+      binNetAddr = tmp;
+
+      tbdy.appendChild(tr);
+    }
+    tbl.appendChild(tbdy);
+    solution.appendChild(tbl);
+  }
+
+  function binDigitToBinIP(a) {
+    let r = addLeadingZero(32, a);
+    r = r.splice(8, 0, '.');
+    r = r.splice(17, 0, '.');
+    r = r.splice(26, 0, '.');
+    return r;
+  }
+
+  function binAdd(a, b) {
+    let r = parseInt(a, 2) + parseInt(b, 2);
+    return decToBinary(r);
+  }
+
+  function binIPToBinary(a) {
+    let r = a.split('.');
+    return r[0] + r[1] + r[2] + r[3];
+  }
+
+  function sortNumber(a, b) {
+    return a - b;
+  }
+
+  function netMask(a, b) {
+    let l = parseInt(a) + 2;
+    let i = parseInt(b);
+    let pV = Math.pow(2, i);
+    if (l <= pV)
+      return 32 - i;
+    else
+      return netMask(a, i + 1);
+  }
+
+  function allocatedSize(a, b) {
+    let hostSize = parseInt(a);
+    let incValue = parseInt(b);
+    let pV = Math.pow(2, incValue);
+    let allSize = pV - 2;
+    if (hostSize <= allSize)
+      return allSize;
+    else
+      return allocatedSize(hostSize, incValue + 1);
+  }
+
+  String.prototype.replaceAt = function(index, character) {
+    return this.substr(0, index) + character + this.substr(index + character.length);
+  };
+  String.prototype.splice = function(idx, rem, str) {
+    return this.slice(0, idx) + str + this.slice(idx + Math.abs(rem));
+  };
+
+</script>
+</body>
+</html>
